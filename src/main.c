@@ -14,7 +14,6 @@ typedef struct _DNS_CACHE_ENTRY {
 
 // Use DnsGetCacheDataTableEx and DnsFree
 DWORD WINAPI DnsGetCacheDataTableEx(DWORD, PDNS_CACHE_ENTRY*);
-VOID WINAPI DnsFree(PVOID, DWORD);
 
 #pragma comment(lib, "dnsapi.lib")
 
