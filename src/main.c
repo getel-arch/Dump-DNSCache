@@ -2,6 +2,18 @@
 #include <stdio.h>
 #include <windns.h>
 
+// Undocumented DNS cache entry structure and function
+typedef struct _DNS_CACHE_ENTRY {
+    struct _DNS_CACHE_ENTRY *pNext;
+    PWSTR pszName;
+    WORD wType;
+    WORD wDataLength;
+    DWORD dwFlags;
+    DWORD dwTtl;
+} DNS_CACHE_ENTRY, *PDNS_CACHE_ENTRY;
+
+DWORD WINAPI DnsGetCacheDataTable(PDNS_CACHE_ENTRY *ppEntry);
+
 #pragma comment(lib, "dnsapi.lib")
 
 int main(int argc, char *argv[]) {
