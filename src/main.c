@@ -33,8 +33,13 @@ int main(int argc, char *argv[]) {
     }
 
     // Get the DNS cache table
-    if (DnsGetCacheDataTable(&pEntry) != ERROR_SUCCESS) {
-        fprintf(out, "Failed to get DNS cache table.\n");
+    DWORD status = DnsGetCacheDataTable(&pEntry);
+    if (status != ERROR_SUCCESS) {
+        if (status == ERROR_ACCESS_DENIED) {
+            fprintf(out, "Failed to get DNS cache table: Access denied. Please run as Administrator.\n");
+        } else {
+            fprintf(out, "Failed to get DNS cache table. Error code: %lu\n", status);
+        }
         if (csv_mode) fclose(out);
         return 1;
     }
