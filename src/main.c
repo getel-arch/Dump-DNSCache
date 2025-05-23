@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <windns.h>
+#include <time.h>
 
 // Undocumented DNS cache entry structure and function
 typedef struct _DNS_CACHE_ENTRY {
@@ -46,6 +47,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    time_t now = time(NULL);
+
     if (csv_mode) {
         // Print CSV header
         fprintf(out, "Name,Type,TTL\n");
@@ -58,12 +61,13 @@ int main(int argc, char *argv[]) {
     pCurrent = pEntry;
     while (pCurrent) {
         pNext = pCurrent->pNext;
+        DWORD ttl = (pCurrent->dwTtl > now) ? (pCurrent->dwTtl - now) : 0;
         if (csv_mode) {
             // Print CSV row
-            fprintf(out, "\"%ws\",%u,%u\n", pCurrent->pszName, pCurrent->wType, pCurrent->dwTtl);
+            fprintf(out, "\"%ws\",%u,%lu\n", pCurrent->pszName, pCurrent->wType, ttl);
         } else {
             // Print human-readable row
-            printf("%-40ws %-10u %-10u\n", pCurrent->pszName, pCurrent->wType, pCurrent->dwTtl);
+            printf("%-40ws %-10u %-10lu\n", pCurrent->pszName, pCurrent->wType, ttl);
         }
         DnsFree(pCurrent, 0);
         pCurrent = pNext;
