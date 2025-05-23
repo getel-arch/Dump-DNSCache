@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <stdio.h>
-#include <dnsapi.h>
+#include <windns.h>
 
 #pragma comment(lib, "dnsapi.lib")
 
