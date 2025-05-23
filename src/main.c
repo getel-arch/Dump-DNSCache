@@ -12,13 +12,16 @@ typedef struct _DNS_CACHE_ENTRY {
     DWORD dwTtl;
 } DNS_CACHE_ENTRY, *PDNS_CACHE_ENTRY;
 
-DWORD WINAPI DnsGetCacheDataTable(PDNS_CACHE_ENTRY *ppEntry);
+// Use DnsGetCacheDataTableEx and DnsFree
+DWORD WINAPI DnsGetCacheDataTableEx(DWORD, PDNS_CACHE_ENTRY*);
+VOID WINAPI DnsFree(PVOID, DWORD);
 
 #pragma comment(lib, "dnsapi.lib")
 
 int main(int argc, char *argv[]) {
     PDNS_CACHE_ENTRY pEntry = NULL;
     PDNS_CACHE_ENTRY pCurrent = NULL;
+    PDNS_CACHE_ENTRY pNext = NULL;
     FILE *out = stdout;
     int csv_mode = 0;
 
@@ -32,8 +35,8 @@ int main(int argc, char *argv[]) {
         csv_mode = 1;
     }
 
-    // Get the DNS cache table
-    DWORD status = DnsGetCacheDataTable(&pEntry);
+    // Get the DNS cache table using DnsGetCacheDataTableEx
+    DWORD status = DnsGetCacheDataTableEx(1, &pEntry);
     if (status != ERROR_SUCCESS) {
         if (status == ERROR_ACCESS_DENIED) {
             fprintf(out, "Failed to get DNS cache table: Access denied. Please run as Administrator.\n");
@@ -55,18 +58,17 @@ int main(int argc, char *argv[]) {
 
     pCurrent = pEntry;
     while (pCurrent) {
+        pNext = pCurrent->pNext;
         if (csv_mode) {
             // Print CSV row
-            fprintf(out, "\"%s\",%u,%u\n", pCurrent->pszName, pCurrent->wType, pCurrent->dwTtl);
+            fprintf(out, "\"%ws\",%u,%u\n", pCurrent->pszName, pCurrent->wType, pCurrent->dwTtl);
         } else {
             // Print human-readable row
-            printf("%-40s %-10u %-10u\n", pCurrent->pszName, pCurrent->wType, pCurrent->dwTtl);
+            printf("%-40ws %-10u %-10u\n", pCurrent->pszName, pCurrent->wType, pCurrent->dwTtl);
         }
-        pCurrent = pCurrent->pNext;
+        DnsFree(pCurrent, 0);
+        pCurrent = pNext;
     }
-
-    // Free the memory allocated by DnsGetCacheDataTable
-    LocalFree(pEntry);
 
     if (csv_mode) fclose(out);
 
