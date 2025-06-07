@@ -23,7 +23,7 @@ jobs:
       run: New-Item -ItemType Directory -Path .\output
 
     - name: Compile 64bit Binary
-      run: gcc .\src\main.c -o .\output\dump_dns_cache_x64.exe -s -m64 -ldnsapi
+      run: gcc .\src\main.c -o .\output\dump_dns_cache_x64.exe -s -m64 -ldnsapi -lws2_32
 
     - name: Read Version
       run: |
