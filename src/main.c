@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     pCurrent = pEntry;
     while (pCurrent) {
         pNext = pCurrent->pNext;
-        DWORD ttl = (pCurrent->dwTtl > now) ? (pCurrent->dwTtl - now) : 0;
+        DWORD ttl = pCurrent->dwTtl; // Use dwTtl directly
 
         // Prepare buffer for record data
         char data_buf[256] = "";
