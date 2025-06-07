@@ -51,35 +51,82 @@ int main(int argc, char *argv[]) {
 
     if (csv_mode) {
         // Print CSV header
-        fprintf(out, "Name,Type,DataLength,Flags,TTL\n");
+        fprintf(out, "Name,Type,DataLength,Flags,TTL,Data\n");
     } else {
         // Print human-readable header
         printf("DNS Cache Entries:\n");
-        printf("%-40s %-10s %-12s %-10s %-10s\n", "Name", "Type", "DataLen", "Flags", "TTL");
+        printf("%-40s %-10s %-12s %-10s %-10s %-s\n", "Name", "Type", "DataLen", "Flags", "TTL", "Data");
     }
 
     pCurrent = pEntry;
     while (pCurrent) {
         pNext = pCurrent->pNext;
-        // Calculate remaining TTL in seconds
         DWORD ttl = (pCurrent->dwTtl > now) ? (pCurrent->dwTtl - now) : 0;
+
+        // Prepare buffer for record data
+        char data_buf[256] = "";
+        if (pCurrent->wDataLength > 0) {
+            DNS_RECORD *pDnsRecord = NULL;
+            DNS_STATUS dnsStatus = DnsQuery_W(
+                pCurrent->pszName,
+                pCurrent->wType,
+                DNS_QUERY_NO_WIRE_QUERY | DNS_QUERY_NO_HOSTS_FILE | DNS_QUERY_NO_NETBT,
+                NULL,
+                &pDnsRecord,
+                NULL
+            );
+            if (dnsStatus == ERROR_SUCCESS && pDnsRecord) {
+                DNS_RECORD *rec = pDnsRecord;
+                // Only print the first record for brevity
+                switch (rec->wType) {
+                    case DNS_TYPE_A:
+                        snprintf(data_buf, sizeof(data_buf), "%u.%u.%u.%u",
+                            (rec->Data.A.IpAddress) & 0xFF,
+                            (rec->Data.A.IpAddress >> 8) & 0xFF,
+                            (rec->Data.A.IpAddress >> 16) & 0xFF,
+                            (rec->Data.A.IpAddress >> 24) & 0xFF
+                        );
+                        break;
+                    case DNS_TYPE_AAAA: {
+                        char ipv6[64];
+                        DWORD ipv6len = sizeof(ipv6);
+                        if (WSAAddressToStringA((LPSOCKADDR)&rec->Data.AAAA.Ip6Address, sizeof(rec->Data.AAAA.Ip6Address), NULL, ipv6, &ipv6len) == 0) {
+                            snprintf(data_buf, sizeof(data_buf), "%s", ipv6);
+                        } else {
+                            snprintf(data_buf, sizeof(data_buf), "<IPv6>");
+                        }
+                        break;
+                    }
+                    case DNS_TYPE_PTR:
+                        WideCharToMultiByte(CP_UTF8, 0, rec->Data.PTR.pNameHost, -1, data_buf, sizeof(data_buf), NULL, NULL);
+                        break;
+                    default:
+                        snprintf(data_buf, sizeof(data_buf), "<type %u>", rec->wType);
+                        break;
+                }
+                DnsRecordListFree(pDnsRecord, DnsFreeRecordList);
+            }
+        }
+
         if (csv_mode) {
             // Print CSV row
-            fprintf(out, "\"%ws\",%u,%u,0x%08lx,%lu\n",
+            fprintf(out, "\"%ws\",%u,%u,0x%08lx,%lu,\"%s\"\n",
                 pCurrent->pszName,
                 pCurrent->wType,
                 pCurrent->wDataLength,
                 (unsigned long)pCurrent->dwFlags,
-                ttl
+                ttl,
+                data_buf
             );
         } else {
             // Print human-readable row
-            printf("%-40ws %-10u %-12u 0x%08lx %-10lu\n",
+            printf("%-40ws %-10u %-12u 0x%08lx %-10lu %s\n",
                 pCurrent->pszName,
                 pCurrent->wType,
                 pCurrent->wDataLength,
                 (unsigned long)pCurrent->dwFlags,
-                ttl
+                ttl,
+                data_buf
             );
         }
         // Free pszName if allocated
