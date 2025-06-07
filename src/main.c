@@ -1,3 +1,4 @@
+#include <winsock2.h> // Must be included before windows.h
 #include <windows.h>
 #include <stdio.h>
 #include <windns.h>
@@ -107,7 +108,7 @@ int main(int argc, char *argv[]) {
                         break;
                     }
                     case DNS_TYPE_PTR:
-                        WideCharToMultiByte(CP_UTF8, 0, rec->Data.PTR.pNameHost, -1, data_buf, sizeof(data_buf), NULL, NULL);
+                        WideCharToMultiByte(CP_UTF8, 0, (LPCWCH)rec->Data.PTR.pNameHost, -1, data_buf, sizeof(data_buf), NULL, NULL);
                         break;
                     default:
                         snprintf(data_buf, sizeof(data_buf), "<type %u>", rec->wType);
