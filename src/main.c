@@ -61,7 +61,8 @@ int main(int argc, char *argv[]) {
     pCurrent = pEntry;
     while (pCurrent) {
         pNext = pCurrent->pNext;
-        DWORD ttl = pCurrent->dwTtl; // dwTtl is already the remaining TTL in seconds
+        // Calculate remaining TTL in seconds
+        DWORD ttl = (pCurrent->dwTtl > now) ? (pCurrent->dwTtl - now) : 0;
         if (csv_mode) {
             // Print CSV row
             fprintf(out, "\"%ws\",%u,%u,0x%08lx,%lu\n",
