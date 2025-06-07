@@ -20,6 +20,15 @@ DWORD WINAPI DnsGetCacheDataTableEx(DWORD, PDNS_CACHE_ENTRY*);
 
 #pragma comment(lib, "dnsapi.lib")
 
+// Helper: Convert PWSTR to UTF-8/multibyte string
+void wide_to_utf8(const wchar_t *src, char *dst, size_t dst_size) {
+    if (!src || !dst || dst_size == 0) {
+        if (dst && dst_size > 0) dst[0] = 0;
+        return;
+    }
+    WideCharToMultiByte(CP_UTF8, 0, src, -1, dst, (int)dst_size, NULL, NULL);
+}
+
 int main(int argc, char *argv[]) {
     PDNS_CACHE_ENTRY pEntry = NULL;
     PDNS_CACHE_ENTRY pCurrent = NULL;
@@ -61,17 +70,21 @@ int main(int argc, char *argv[]) {
 
     if (csv_mode) {
         // Print CSV header
-        fprintf(out, "Name,Type,DataLength,Flags,TTL,Data\n");
+        fprintf(out, "Name,Type,DataLength,Flags,TTL(raw),Data\n");
     } else {
         // Print human-readable header
         printf("DNS Cache Entries:\n");
-        printf("%-40s %-10s %-12s %-10s %-10s %-s\n", "Name", "Type", "DataLen", "Flags", "TTL", "Data");
+        printf("%-55s %-10s %-12s %-10s %-12s %-s\n", "Name", "Type", "DataLen", "Flags", "TTL(raw)", "Data");
     }
 
     pCurrent = pEntry;
     while (pCurrent) {
         pNext = pCurrent->pNext;
         DWORD ttl = pCurrent->dwTtl; // Use dwTtl directly
+
+        // Convert Name to UTF-8
+        char name_utf8[512];
+        wide_to_utf8(pCurrent->pszName, name_utf8, sizeof(name_utf8));
 
         // Prepare buffer for record data
         char data_buf[256] = "";
@@ -108,20 +121,24 @@ int main(int argc, char *argv[]) {
                         break;
                     }
                     case DNS_TYPE_PTR:
-                        WideCharToMultiByte(CP_UTF8, 0, (LPCWCH)rec->Data.PTR.pNameHost, -1, data_buf, sizeof(data_buf), NULL, NULL);
+                        wide_to_utf8(rec->Data.PTR.pNameHost, data_buf, sizeof(data_buf));
                         break;
                     default:
                         snprintf(data_buf, sizeof(data_buf), "<type %u>", rec->wType);
                         break;
                 }
                 DnsRecordListFree(pDnsRecord, DnsFreeRecordList);
+            } else {
+                snprintf(data_buf, sizeof(data_buf), "<no data>");
             }
+        } else {
+            snprintf(data_buf, sizeof(data_buf), "<no data>");
         }
 
         if (csv_mode) {
             // Print CSV row
-            fprintf(out, "\"%ws\",%u,%u,0x%08lx,%lu,\"%s\"\n",
-                pCurrent->pszName,
+            fprintf(out, "\"%s\",%u,%u,0x%08lx,%lu,\"%s\"\n",
+                name_utf8,
                 pCurrent->wType,
                 pCurrent->wDataLength,
                 (unsigned long)pCurrent->dwFlags,
@@ -130,8 +147,8 @@ int main(int argc, char *argv[]) {
             );
         } else {
             // Print human-readable row
-            printf("%-40ws %-10u %-12u 0x%08lx %-10lu %s\n",
-                pCurrent->pszName,
+            printf("%-55s %-10u %-12u 0x%08lx %-12lu %s\n",
+                name_utf8,
                 pCurrent->wType,
                 pCurrent->wDataLength,
                 (unsigned long)pCurrent->dwFlags,
