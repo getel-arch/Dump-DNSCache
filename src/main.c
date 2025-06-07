@@ -51,11 +51,11 @@ int main(int argc, char *argv[]) {
 
     if (csv_mode) {
         // Print CSV header
-        fprintf(out, "Name,Type,TTL\n");
+        fprintf(out, "Name,Type,DataLength,Flags,TTL\n");
     } else {
         // Print human-readable header
         printf("DNS Cache Entries:\n");
-        printf("%-40s %-10s %-10s\n", "Name", "Type", "TTL");
+        printf("%-40s %-10s %-12s %-10s %-10s\n", "Name", "Type", "DataLen", "Flags", "TTL");
     }
 
     pCurrent = pEntry;
@@ -64,10 +64,26 @@ int main(int argc, char *argv[]) {
         DWORD ttl = pCurrent->dwTtl; // dwTtl is already the remaining TTL in seconds
         if (csv_mode) {
             // Print CSV row
-            fprintf(out, "\"%ws\",%u,%lu\n", pCurrent->pszName, pCurrent->wType, ttl);
+            fprintf(out, "\"%ws\",%u,%u,0x%08lx,%lu\n",
+                pCurrent->pszName,
+                pCurrent->wType,
+                pCurrent->wDataLength,
+                (unsigned long)pCurrent->dwFlags,
+                ttl
+            );
         } else {
             // Print human-readable row
-            printf("%-40ws %-10u %-10lu\n", pCurrent->pszName, pCurrent->wType, ttl);
+            printf("%-40ws %-10u %-12u 0x%08lx %-10lu\n",
+                pCurrent->pszName,
+                pCurrent->wType,
+                pCurrent->wDataLength,
+                (unsigned long)pCurrent->dwFlags,
+                ttl
+            );
+        }
+        // Free pszName if allocated
+        if (pCurrent->pszName) {
+            DnsFree(pCurrent->pszName, 0);
         }
         DnsFree(pCurrent, 0);
         pCurrent = pNext;
