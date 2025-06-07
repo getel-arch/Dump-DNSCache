@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <windns.h>
 #include <time.h>
+#include <ws2tcpip.h> // Added for WSAAddressToStringA
 
 // Undocumented DNS cache entry structure and function
 typedef struct _DNS_CACHE_ENTRY {
@@ -24,6 +25,14 @@ int main(int argc, char *argv[]) {
     PDNS_CACHE_ENTRY pNext = NULL;
     FILE *out = stdout;
     int csv_mode = 0;
+
+    // Initialize Winsock
+    WSADATA wsaData;
+    int wsaInit = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (wsaInit != 0) {
+        fprintf(stderr, "WSAStartup failed: %d\n", wsaInit);
+        return 1;
+    }
 
     // Check for optional CSV file parameter
     if (argc > 1) {
@@ -138,6 +147,8 @@ int main(int argc, char *argv[]) {
     }
 
     if (csv_mode) fclose(out);
+
+    WSACleanup(); // Cleanup Winsock
 
     return 0;
 }
